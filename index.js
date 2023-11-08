@@ -78,6 +78,8 @@ async function run() {
             console.log(result)
             res.send(result);
         })
+  
+  
         // get specific data 
         app.get('/getuserdata', async (req, res) => {
             const userEmail = req.query.email;
@@ -108,10 +110,10 @@ async function run() {
 
         // get books
 
-        app.get('/getbooks', async (req, res) => {
+        app.get('/getbooks',verify, async (req, res) => {
             
             let queryObj ={} 
-// category
+          // category
             const category = req.query.category;
             // for pagination
             const page = Number(req.query.page);
@@ -123,15 +125,23 @@ async function run() {
                 queryObj.category = category
             }
             const cursor = booksCollection.find(queryObj).skip(skip).limit(limit);
-            const result = await cursor.toArray()
 
-            // count data
-            const total = await booksCollection.countDocuments()
+            
+                const result =await cursor.toArray()
 
-            res.send({
-                total,
-                result
-            })
+                // count data
+                const total =await  booksCollection.countDocuments()
+    
+                res.send({
+                    total,
+                    result
+                })
+            
+        //     catch(error){
+        //    console.log(error);
+        //    res.status(500).send("An erro occour")
+        //     }
+            
         })
 
         // for recent blog page sort by date
