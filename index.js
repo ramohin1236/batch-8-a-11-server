@@ -36,6 +36,7 @@ async function run() {
         const booksCollection = client.db("Book-Hub").collection('post-books')
         const categoryCollection = client.db("Book-Hub").collection('category')
         const wishListCollection = client.db("Book-Hub").collection('wishlist')
+        const subscriberCollection = client.db("Book-Hub").collection('subscribe')
 
 
         const verify = (req, res, next) => {
@@ -70,7 +71,11 @@ async function run() {
                 secure: true,
                 sameSite: 'none'
             }).send({ success: true })
-        })
+        });
+
+
+
+        
         // books post 
         app.post('/postbooks', async (req, res) => {
             const books = req.body;
@@ -78,23 +83,51 @@ async function run() {
             const result = await booksCollection.insertOne(books);
             console.log(result)
             res.send(result);
-        })
+        });
+
+
+
+
+
         // books post wishlist
         app.post('/wishlist', async (req, res) => {
             const books = req.body;
-            // console.log(books)
             const result = await wishListCollection.insertOne(books);
-            // console.log(result)
             res.send(result);
-        })
-//   books get
-                    app.get('/wishlist',  async (req, res) => {
-                       const cursor = wishListCollection.find();
-                       const user = await cursor.toArray()
-                       res.send(user)
-                     })
+        });
 
-  
+
+
+
+
+        // Newsletter subscribe
+        app.post('/subscribe', async (req, res) => {
+            const books = req.body;
+            const result = await subscriberCollection.insertOne(books);
+            res.send(result);
+        });
+
+
+
+
+        //   books get
+        app.get('/wishlist',verify, async (req, res) => {
+            const queryEmail = req.query.email;
+            const tokenEmail = req.user.email;
+
+
+            if (queryEmail !== tokenEmail) {
+                return res.status(403).send({ message: 'forbiddedn access!' })
+            }
+            let query = {}
+            if (queryEmail) {
+                query.email = queryEmail;
+            }
+            const result = await wishListCollection.find(query).toArray()
+            res.send(result)
+        })
+
+
         // get specific data 
         app.get('/getuserdata', async (req, res) => {
             const userEmail = req.query.email;
@@ -117,67 +150,73 @@ async function run() {
         })
         // get category
 
-        app.get('/getcategory',  async (req, res) => {
+        app.get('/getcategory', async (req, res) => {
             const cursor = categoryCollection.find();
             const user = await cursor.toArray()
             res.send(user)
         })
 
-
+        //    delete data
+        app.delete('/book/:id', async(req,res)=>{
+            const id = req.params.id;
+            const query = {_id: new ObjectId(id)}
+            const result = await wishListCollection.deleteOne(query);
+            res.send(result)
+        })
 
         // get one toyota car in database 
-app.get("/getbook/:id",async(req,res)=>{
-    const id = req.params.id;
-    const query = {_id : new ObjectId(id)}
-    const user = await booksCollection.findOne(query)
-    res.send(user)
- })
+        app.get("/getbook/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const user = await booksCollection.findOne(query)
+            res.send(user)
+        })
 
 
 
         // get books
 
         app.get('/getbooks', async (req, res) => {
-            
-            let queryObj ={} 
-          // category
+
+            let queryObj = {}
+            // category
             const category = req.query.category;
             // for pagination
             const page = Number(req.query.page);
             const limit = Number(req.query.limit);
 
-            const skip = (page-1)*limit
+            const skip = (page - 1) * limit
 
-            if(category){
+            if (category) {
                 queryObj.category = category
             }
             const cursor = booksCollection.find(queryObj).skip(skip).limit(limit);
 
-            
-                const result =await cursor.toArray()
 
-                // count data
-                const total =await  booksCollection.countDocuments()
-    
-                res.send({
-                    total,
-                    result
-                })
-            
-        //     catch(error){
-        //    console.log(error);
-        //    res.status(500).send("An erro occour")
-        //     }
-            
+            const result = await cursor.toArray()
+
+            // count data
+            const total = await booksCollection.countDocuments()
+
+            res.send({
+                total,
+                result
+            })
+
+            //     catch(error){
+            //    console.log(error);
+            //    res.status(500).send("An erro occour")
+            //     }
+
         })
 
         // for recent blog page sort by date
-        app.get('/recent', async(req,res)=>{
-            
-            let recentSortObj={}
+        app.get('/recent', async (req, res) => {
+
+            let recentSortObj = {}
             const sortField = req.query.sortField
             const sortOrder = req.query.sortOrder
-            if(sortField && sortOrder){
+            if (sortField && sortOrder) {
                 recentSortObj[sortField] = sortOrder;
             }
 
