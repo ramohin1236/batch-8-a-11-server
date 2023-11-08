@@ -43,12 +43,12 @@ async function run() {
 
             //  if client does not send token
             if (!token) {
-                return req.status(401).send({ message: 'You are not authorized' })
+                return res.status(401).send({ message: 'You are not authorized' })
             }
 
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
                 if (err) {
-                    return req.status(401).send({ message: 'You are not authorized' })
+                    return res.status(401).send({ message: 'You are not authorized' })
                 }
                 //   console.log(decoded)
                 req.user = decoded;
@@ -62,11 +62,11 @@ async function run() {
 
         app.post('/jwt', async (req, res) => {
             const user = req.body;
-            console.log("user token", user.email)
+            console.log("user token", user)
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: false,
+                secure: true,
                 sameSite: 'none'
             }).send({ success: true })
         })
@@ -79,7 +79,7 @@ async function run() {
             res.send(result);
         })
         // get specific data 
-        app.get('/getuserdata', verify, async (req, res) => {
+        app.get('/getuserdata', async (req, res) => {
             const userEmail = req.query.email;
             const tokenEmail = req.user.email;
             // console.log(userEmail,tokenEmail)
@@ -100,7 +100,7 @@ async function run() {
         })
         // get category
 
-        app.get('/getcategory', verify, async (req, res) => {
+        app.get('/getcategory',  async (req, res) => {
             const cursor = categoryCollection.find();
             const user = await cursor.toArray()
             res.send(user)
@@ -109,9 +109,44 @@ async function run() {
         // get books
 
         app.get('/getbooks', async (req, res) => {
-            const cursor = booksCollection.find();
-            const user = await cursor.toArray()
-            res.send(user)
+            
+            let queryObj ={} 
+// category
+            const category = req.query.category;
+            // for pagination
+            const page = Number(req.query.page);
+            const limit = Number(req.query.limit);
+
+            const skip = (page-1)*limit
+
+            if(category){
+                queryObj.category = category
+            }
+            const cursor = booksCollection.find(queryObj).skip(skip).limit(limit);
+            const result = await cursor.toArray()
+
+            // count data
+            const total = await booksCollection.countDocuments()
+
+            res.send({
+                total,
+                result
+            })
+        })
+
+        // for recent blog page sort by date
+        app.get('/recent', async(req,res)=>{
+            
+            let recentSortObj={}
+            const sortField = req.query.sortField
+            const sortOrder = req.query.sortOrder
+            if(sortField && sortOrder){
+                recentSortObj[sortField] = sortOrder;
+            }
+
+            const cursor = booksCollection.find().sort(recentSortObj)
+            const result = await cursor.toArray()
+            res.send(result)
         })
 
 
