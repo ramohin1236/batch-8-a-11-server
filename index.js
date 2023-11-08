@@ -1,5 +1,5 @@
 const express = require('express')
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require("jsonwebtoken")
 var cookieParser = require('cookie-parser')
 require('dotenv').config();
@@ -35,6 +35,7 @@ async function run() {
 
         const booksCollection = client.db("Book-Hub").collection('post-books')
         const categoryCollection = client.db("Book-Hub").collection('category')
+        const wishListCollection = client.db("Book-Hub").collection('wishlist')
 
 
         const verify = (req, res, next) => {
@@ -78,7 +79,21 @@ async function run() {
             console.log(result)
             res.send(result);
         })
-  
+        // books post wishlist
+        app.post('/wishlist', async (req, res) => {
+            const books = req.body;
+            // console.log(books)
+            const result = await wishListCollection.insertOne(books);
+            // console.log(result)
+            res.send(result);
+        })
+//   books get
+                    app.get('/wishlist',  async (req, res) => {
+                       const cursor = wishListCollection.find();
+                       const user = await cursor.toArray()
+                       res.send(user)
+                     })
+
   
         // get specific data 
         app.get('/getuserdata', async (req, res) => {
@@ -108,9 +123,21 @@ async function run() {
             res.send(user)
         })
 
+
+
+        // get one toyota car in database 
+app.get("/getbook/:id",async(req,res)=>{
+    const id = req.params.id;
+    const query = {_id : new ObjectId(id)}
+    const user = await booksCollection.findOne(query)
+    res.send(user)
+ })
+
+
+
         // get books
 
-        app.get('/getbooks',verify, async (req, res) => {
+        app.get('/getbooks', async (req, res) => {
             
             let queryObj ={} 
           // category
