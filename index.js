@@ -1,15 +1,17 @@
 const express = require('express')
+const app = express()
+const cors = require('cors')
+require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require("jsonwebtoken")
 var cookieParser = require('cookie-parser')
-require('dotenv').config();
-const cors = require('cors')
-const app = express()
 const port = process.env.PORT || 5000;
 
 
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: ["https://book-blog-9827e.web.app",
+        "http://localhost:5173"
+    ],
     credentials: true
 }));
 app.use(express.json());
@@ -37,6 +39,7 @@ async function run() {
         const categoryCollection = client.db("Book-Hub").collection('category')
         const wishListCollection = client.db("Book-Hub").collection('wishlist')
         const subscriberCollection = client.db("Book-Hub").collection('subscribe')
+        const  commentCollection = client.db("Book-Hub").collection('comments')
 
 
         const verify = (req, res, next) => {
@@ -75,7 +78,7 @@ async function run() {
 
 
 
-        
+
         // books post 
         app.post('/postbooks', async (req, res) => {
             const books = req.body;
@@ -106,12 +109,24 @@ async function run() {
             const result = await subscriberCollection.insertOne(books);
             res.send(result);
         });
+        // Comment
+        app.post('/comment', async (req, res) => {
+            const books = req.body;
+            const result = await commentCollection.insertOne(books);
+            res.send(result);
+        });
+        // get comment
+        app.get('/comment', async (req, res) => {
+            const cursor = commentCollection.find();
+            const user = await cursor.toArray()
+            res.send(user)
+        })
 
 
 
 
         //   books get
-        app.get('/wishlist',verify, async (req, res) => {
+        app.get('/wishlist', verify, async (req, res) => {
             const queryEmail = req.query.email;
             const tokenEmail = req.user.email;
 
@@ -156,15 +171,31 @@ async function run() {
             res.send(user)
         })
 
+
+        // get books by category
+        app.get('/getbycategory', async(req,res)=>{
+            let queryObj ={};
+            const category= req.query.category;
+
+            if(category){
+                queryObj.category = category;
+            }
+            const cursor = booksCollection.find(queryObj)
+            const result= await cursor.toArray()
+            res.send(result)
+        }) 
+        
+        
+        
         //    delete data
-        app.delete('/book/:id', async(req,res)=>{
+        app.delete('/book/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id: new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const result = await wishListCollection.deleteOne(query);
             res.send(result)
         })
 
-        // get one toyota car in database 
+        // get one in database 
         app.get("/getbook/:id", async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
@@ -233,7 +264,7 @@ async function run() {
 
 
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
